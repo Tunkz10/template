@@ -22,38 +22,55 @@ function App() {
   const [isStopping, setIsStopping] = useState(false);
   const [showEndScreen, setShowEndScreen] = useState(false);
   const [showText2, setShowText2] = useState(false);
+  
+  // Track if music has started to prevent resetting it
+  const [musicStarted, setMusicStarted] = useState(false);
+  
   const wheelRef = useRef(null);
   const landscapeWheelRef = useRef(null); 
 
   // --- SOUND EFFECTS ---
-  const backgroundMusic = useSound(bgMusic, 0.3, true); 
-  const stopButtonSound = useSound(stopSound, 0.5); 
+  // FIX 3: Lowered BG volume (0.15) and increased SFX volume (0.8) to prevent clashing
+  const backgroundMusic = useSound(bgMusic, 0.15, true); 
+  const stopButtonSound = useSound(stopSound, 0.8); 
+
+  // --- MUSIC HANDLER ---
+  const startMusic = () => {
+    if (!musicStarted) {
+      backgroundMusic.play();
+      setMusicStarted(true);
+    }
+  };
 
   useEffect(() => {
+    // Attempt auto-play, but browsers might block it
     backgroundMusic.play();
-    const playOnInteraction = () => {
-      backgroundMusic.play();
-      document.removeEventListener('click', playOnInteraction);
-      document.removeEventListener('touchstart', playOnInteraction);
-    };
-    document.addEventListener('click', playOnInteraction);
-    document.addEventListener('touchstart', playOnInteraction);
+
+    const globalHandler = () => startMusic();
+    
+    window.addEventListener('click', globalHandler);
+    window.addEventListener('touchstart', globalHandler);
     
     return () => {
-      document.removeEventListener('click', playOnInteraction);
-      document.removeEventListener('touchstart', playOnInteraction);
+      window.removeEventListener('click', globalHandler);
+      window.removeEventListener('touchstart', globalHandler);
     };
-  }, []);
+  }, [musicStarted]); 
 
   // --- CONFIGURATION ---
-  const IDLE_SPEED = 0.5; 
+  // FIX 1: Increased from 0.5 to 3.0 so it spins slower/gentler in the beginning
+  const IDLE_SPEED = 3.0; 
   const STOP_DURATION = 3.5; 
   const STOP_SPINS = 3; 
 
   const handleStop = () => {
-    // 1. EXTRA GUARD: Logic prevents running if already stopping
     if (isStopping) return;
     setIsStopping(true);
+    
+    // FIX 3 (Cont.): Pause BG music when stopping so the SFX stands out clearly
+    if (backgroundMusic.pause) {
+        backgroundMusic.pause();
+    }
     
     stopButtonSound.play();
     
@@ -90,11 +107,15 @@ function App() {
   return (
     <div 
       ref={wrapperRef} 
+      // --- INTERACTION LISTENERS ---
+      onClickCapture={startMusic}
+      onTouchStartCapture={startMusic}
       className="app-wrapper w-full h-screen relative flex items-center justify-center overflow-hidden"
       style={{
         backgroundImage: `url(${backgroundImg})`,
-        backgroundSize: "cover",
+        backgroundSize: "100% 100%", 
         backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
       }}
     >
       {/* --- GARLANDS --- */}
@@ -146,10 +167,15 @@ function App() {
             />
           </div>
 
+          {/* FIX 2: Added Hint Caption (Portrait) */}
+          <p className="text-white font-bold text-center text-sm drop-shadow-md mt-6 px-4 animate-pulse select-none">
+             Stop the wheel to reveal a mystery discount!
+          </p>
+
           <button 
             onClick={handleStop} 
-            disabled={isStopping} // DISABLE CLICK
-            className={`mt-12 transition-all duration-150 z-20 
+            disabled={isStopping} 
+            className={`mt-4 transition-all duration-150 z-20 
               ${isStopping ? 'opacity-90 cursor-not-allowed scale-95' : 'animate-pulse-slow'}`}
           >
             <img src={stopButton} alt="STOP" className="w-[190px] drop-shadow-xl" />
@@ -158,7 +184,7 @@ function App() {
       </div>
       )}
 
-      {/* --- LANDSCAPE LAYOUT (Updated for iPad Mini) --- */}
+      {/* --- LANDSCAPE LAYOUT --- */}
       {!showEndScreen && (
       <div className="hidden landscape:flex w-full h-full items-center justify-center px-[3vw] gap-[2vw] xl:gap-[4vw]">
         <header className="flex flex-col items-center select-none pointer-events-none">
@@ -168,7 +194,7 @@ function App() {
 
         <main className="flex-1 flex flex-col items-center justify-center">
           <div className="relative flex items-center justify-center">
-            {/* LANDSCAPE FRAME: Added md:w-[50vh] for Tablet/iPad */}
+            {/* LANDSCAPE FRAME */}
             <img
               src={wheelImg}
               alt="Frame"
@@ -177,7 +203,7 @@ function App() {
                          md:w-[50vh] xl:w-[48vh]"
             />
             
-            {/* LANDSCAPE INSIDE: Added md:w-[45vh] to match frame ratio */}
+            {/* LANDSCAPE INSIDE */}
             <img
               ref={landscapeWheelRef} 
               src={insideImg}
@@ -195,14 +221,17 @@ function App() {
             />
           </div>
 
+          {/* FIX 2: Added Hint Caption (Landscape) */}
+          <p className="text-white font-bold text-center text-sm lg:text-base drop-shadow-md mt-[2vh] px-4 animate-pulse select-none">
+             Stop the wheel to reveal a mystery discount!
+          </p>
+
           <button 
             onClick={handleStop}
-            disabled={isStopping} // DISABLE CLICK
-            // Added conditional styling to remove animation when clicked
-            className={`mt-[2vh] transition-all duration-150 z-20 
+            disabled={isStopping}
+            className={`mt-[1vh] transition-all duration-150 z-20 
               ${isStopping ? 'opacity-90 cursor-not-allowed scale-95' : 'animate-pulse-slow'}`}
           >
-            {/* BUTTON SIZE: Added md:w-[18vh] for Tablet */}
             <img src={stopButton} alt="STOP" 
                  className="w-[13vh] min-w-[100px] max-w-[260px] drop-shadow-xl 
                             md:w-[18vh] xl:w-[22vh]" 
@@ -229,8 +258,6 @@ function App() {
         .animate-pulse-slow {
             animation: pulse-scale 2s ease-in-out infinite;
         }
-
-        /* Removed :active state here because we handle it via React state/disabled prop now */
       `}} />
     </div>
   );

@@ -55,7 +55,7 @@ const EndScreen = ({ showEndScreen }) => {
       ========================================================== */}
       <div
         className={`
-          flex flex-col items-center justify-start pt-[19%]
+          flex flex-col items-center justify-start pt-[16%]
           landscape:w-1/2 landscape:h-full landscape:justify-center landscape:pt-0 landscape:gap-4
           transition-all duration-700 ease-out
           ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
@@ -78,7 +78,7 @@ const EndScreen = ({ showEndScreen }) => {
         /* --- MOVE HIGHER SETTINGS --- */
         -mt-[2rem]           /* Mobile Portrait: Moves up 20px */
         sm:-mt-[30px]        /* Tablet: Moves up 30px */
-        md:-mt-[40px]        /* Larger Screens: Moves up 40px */
+        md:-mt-[-.5rem]       /* Larger Screens: Moves up 40px */
         landscape:-mt-[10px] /* Landscape: Moves up 10px */
         
         /* --- SIZING --- */
@@ -93,14 +93,21 @@ const EndScreen = ({ showEndScreen }) => {
         landscape:md:h-[90px]
         landscape:lg:h-[100px]">
           
-          {/* Text 1 */}
+         {/* Text 1 */}
           <img
             src={text1Img}
             alt="Promo Text 1"
             className={`
               absolute inset-0 w-full h-full object-contain
               transition-all duration-1000 ease-in-out
-              ${!showText2 ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-90 -rotate-3"}
+              
+              /* --- NEW FIX IS HERE --- */
+              /* 1. Move UP on mobile */
+              -mt-[-.2rem] 
+              /* 2. Reset to normal on Tablet (sm) and up */
+              sm:mt-0
+              
+              ${!showText2 ? "opacity-100 scale-100 md:scale-125 rotate-0" : "opacity-0 scale-90 -rotate-3"}
             `}
           />
           {/* Text 2 - positioned absolute to overlap */}
@@ -171,27 +178,31 @@ const EndScreen = ({ showEndScreen }) => {
           />
 
           {/* 2. Items (Products) */}
+         {/* ITEM IMAGE */}
           <img
             src={itemsImg}
             alt="Products"
             className="relative z-10
             
-            /* --- PORTRAIT SIZE --- */
-            w-full max-w-[420px]
-            /* iPhone XR/Pro Max Clamp (>390px) */
-            min-[390px]:max-w-[360px]
-            /* Tablet Reset */
-            sm:w-[95%] sm:max-w-[520px]
-            md:w-[90%] md:max-w-[620px]
+            /* --- PORTRAIT SIZE (UPDATED) --- */
+            /* 1. Base size: allow full width, limit max size to avoid pixelation */
+            w-full max-w-[600px]
+            
+            /* 2. Big Phones (iPhone Pro Max / Samsung Ultra): 
+               Previously restricted to 360px. Now increased to 480px. */
+            min-[390px]:max-w-[480px]
+            
+            /* 3. Tablets: Keep them controlled so they don't cover the buttons */
+            sm:w-[85%] sm:max-w-[520px]
+            md:w-[80%] md:max-w-[620px]
 
-            /* --- LANDSCAPE SIZE --- */
-            landscape:w-[75%]     landscape:max-w-[180px]
+            /* --- LANDSCAPE SIZE (UNCHANGED) --- */
+            landscape:w-[75%]    landscape:max-w-[180px]
             landscape:sm:w-[90%]  landscape:sm:max-w-[320px]
             landscape:md:w-[160%]  landscape:md:max-w-[320px]
             landscape:lg:w-[100%] landscape:lg:max-w-[500px]
             landscape:xl:w-[205%] landscape:xl:max-w-[650px]
 
-            /* --- LANDSCAPE POSITION (Nudge items independently) --- */
             landscape:translate-y-[0px]
             landscape:sm:translate-y-[-20px]
             landscape:md:translate-y-[-1rem]
