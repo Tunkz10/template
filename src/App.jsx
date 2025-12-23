@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import useScaleUI from "./hooks/useScaleUI";
 import { useSound } from "./hooks/useSound";
 import EndScreen from "./components/EndScreen";
+import EndScreenLandscape from "./components/EndScreenLandscape";
 
 // Image Imports
 import backgroundImg from "./assets/img/background.png";
@@ -23,30 +24,97 @@ function App() {
   const [showEndScreen, setShowEndScreen] = useState(false);
   const [showText2, setShowText2] = useState(false);
   
-  // Track if music has started to prevent resetting it
+  // We don't strictly need musicStarted state for logic anymore if we check .paused, 
+  // but we keep it if you want to track state for other reasons.
   const [musicStarted, setMusicStarted] = useState(false);
   
   const wheelRef = useRef(null);
   const landscapeWheelRef = useRef(null); 
+  const fadeIntervalRef = useRef(null); 
 
-  // --- SOUND EFFECTS ---
-  // FIX 3: Lowered BG volume (0.15) and increased SFX volume (0.8) to prevent clashing
-  const backgroundMusic = useSound(bgMusic, 0.15, true); 
+  // --- SOUND CONFIGURATION ---
+  const NORMAL_VOLUME = 0.15; 
+  const DUCK_VOLUME = 0.03;   
+  
+  const backgroundMusic = useSound(bgMusic, NORMAL_VOLUME, true); 
   const stopButtonSound = useSound(stopSound, 0.8); 
 
-  // --- MUSIC HANDLER ---
+  // --- UNIVERSAL FADE FUNCTION ---
+  const fadeTo = (audioSound, targetVol, duration = 1000) => {
+    if (!audioSound) return;
+    
+    const audio = audioSound.getAudio();
+    if (!audio) return;
+    
+    // Clear any existing fade
+    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+
+    const startVol = audio.volume;
+    const diff = targetVol - startVol;
+    
+    // If audio is paused, we must try to play it
+    if (audio.paused && targetVol > 0) {
+        audio.volume = startVol; 
+        const playPromise = audio.play();
+        
+        // FIX: Handle Autoplay blocking
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.log("Autoplay prevented:", error);
+                // If play fails, do NOT run the fade interval
+                // This prevents volume from 'fading up' while silent
+                return; 
+            });
+        }
+    }
+
+    const steps = 20; 
+    const stepTime = duration / steps;
+    const stepVol = diff / steps;
+    let currentStep = 0;
+
+    fadeIntervalRef.current = setInterval(() => {
+      // Safety check: if audio got paused mid-fade (e.g. browser policy), stop fading
+      if (audio.paused && targetVol > 0) {
+         clearInterval(fadeIntervalRef.current);
+         return;
+      }
+
+      currentStep++;
+      const newVol = startVol + (stepVol * currentStep);
+
+      if (newVol >= 0 && newVol <= 1) {
+        audio.volume = newVol;
+      }
+
+      if (currentStep >= steps) {
+        audio.volume = targetVol;
+        clearInterval(fadeIntervalRef.current);
+      }
+    }, stepTime);
+  };
+
+  // --- MUSIC HANDLER (FIXED) ---
   const startMusic = () => {
-    if (!musicStarted) {
-      backgroundMusic.play();
+    if (!backgroundMusic) return;
+    
+    const audio = backgroundMusic.getAudio();
+    if (!audio) return;
+
+    // FIX: Check if audio is strictly PAUSED. 
+    // This ensures that if the initial auto-play failed, the click will still work.
+    if (audio.paused) {
+      audio.volume = 0; 
+      fadeTo(backgroundMusic, NORMAL_VOLUME, 2000);
       setMusicStarted(true);
     }
   };
 
   useEffect(() => {
-    // Attempt auto-play, but browsers might block it
-    backgroundMusic.play();
-
     const globalHandler = () => startMusic();
+    
+    // Try auto-start (likely to fail, but harmless now with the fix)
+    startMusic(); 
     
     window.addEventListener('click', globalHandler);
     window.addEventListener('touchstart', globalHandler);
@@ -54,11 +122,11 @@ function App() {
     return () => {
       window.removeEventListener('click', globalHandler);
       window.removeEventListener('touchstart', globalHandler);
+      if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
     };
-  }, [musicStarted]); 
+  }, [backgroundMusic]); // Added backgroundMusic dependency
 
   // --- CONFIGURATION ---
-  // FIX 1: Increased from 0.5 to 3.0 so it spins slower/gentler in the beginning
   const IDLE_SPEED = 3.0; 
   const STOP_DURATION = 3.5; 
   const STOP_SPINS = 3; 
@@ -67,12 +135,13 @@ function App() {
     if (isStopping) return;
     setIsStopping(true);
     
-    // FIX 3 (Cont.): Pause BG music when stopping so the SFX stands out clearly
-    if (backgroundMusic.pause) {
-        backgroundMusic.pause();
-    }
+    // 1. FADE OUT background music when button is clicked
+    fadeTo(backgroundMusic, 0, 800);
     
-    stopButtonSound.play();
+    // 2. Play stop sound after a short delay to let fade start
+    setTimeout(() => {
+      stopButtonSound.play();
+    }, 200);
     
     const wheels = [wheelRef.current, landscapeWheelRef.current];
     
@@ -95,6 +164,15 @@ function App() {
         }
     });
     
+    // 3. FADE IN background music when wheel stops rotating
+    setTimeout(() => {
+      const audio = backgroundMusic?.getAudio();
+      if (backgroundMusic && audio) {
+        // Fade in the music smoothly when rotation stops
+        fadeTo(backgroundMusic, NORMAL_VOLUME, 1500);
+      }
+    }, STOP_DURATION * 1000); 
+    
     setTimeout(() => {
       setShowEndScreen(true);
       setShowText2(false);
@@ -107,7 +185,6 @@ function App() {
   return (
     <div 
       ref={wrapperRef} 
-      // --- INTERACTION LISTENERS ---
       onClickCapture={startMusic}
       onTouchStartCapture={startMusic}
       className="app-wrapper w-full h-screen relative flex items-center justify-center overflow-hidden"
@@ -118,19 +195,9 @@ function App() {
         backgroundRepeat: "no-repeat"
       }}
     >
-      {/* --- GARLANDS --- */}
-      <img
-        src={garTop}
-        alt=""
-        className="fixed left-0 w-full z-[100] pointer-events-none select-none top-0 landscape:-top-[1rem]"
-      />
-      <img
-        src={garBottom}
-        alt=""
-        className="fixed left-0 w-full z-[100] pointer-events-none select-none -bottom-1 landscape:-bottom-[1rem]"
-      />
+      <img src={garTop} alt="" className="fixed left-0 w-full z-[100] pointer-events-none select-none top-0 landscape:-top-[1rem]" />
+      <img src={garBottom} alt="" className="fixed left-0 w-full z-[100] pointer-events-none select-none -bottom-1 landscape:-bottom-[1rem]" />
 
-      {/* --- PORTRAIT LAYOUT --- */}
       {!showEndScreen && (
       <div 
         ref={appRef} 
@@ -144,13 +211,7 @@ function App() {
 
         <main className="flex-1 flex flex-col items-center justify-center w-full px-4">
           <div className="relative flex items-center justify-center">
-            {/* PORTRAIT WHEEL */}
-            <img
-              src={wheelImg}
-              alt="Frame"
-              className="z-20 w-[360px] pointer-events-none select-none"
-            />
-            
+            <img src={wheelImg} alt="Frame" className="z-20 w-[360px] pointer-events-none select-none" />
             <img
               ref={wheelRef}
               src={insideImg}
@@ -158,25 +219,21 @@ function App() {
               className="absolute z-10"
               style={{
                 width: "322px", 
-                top: "50%",
-                left: "50%",
-                marginTop: "-3px",
+                top: "50%", left: "50%", marginTop: "-3px",
                 transform: `translate(-50%, -50%)`, 
                 animation: `smooth-spin ${IDLE_SPEED}s linear infinite`, 
               }}
             />
           </div>
 
-          {/* FIX 2: Added Hint Caption (Portrait) */}
-          <p className="text-white font-bold text-center text-sm drop-shadow-md mt-6 px-4 animate-pulse select-none">
-             Stop the wheel to reveal a mystery discount!
+          <p className="text-[#0038B1] font-bold text-center text-sm drop-shadow-md mt-6 px-4 animate-pulse select-none">
+              Stop the wheel to reveal a mystery discount!
           </p>
 
           <button 
             onClick={handleStop} 
             disabled={isStopping} 
-            className={`mt-4 transition-all duration-150 z-20 
-              ${isStopping ? 'opacity-90 cursor-not-allowed scale-95' : 'animate-pulse-slow'}`}
+            className={`mt-4 transition-all duration-150 z-20 ${isStopping ? 'opacity-90 cursor-not-allowed scale-95' : 'animate-pulse-slow'}`}
           >
             <img src={stopButton} alt="STOP" className="w-[190px] drop-shadow-xl" />
           </button>
@@ -184,7 +241,6 @@ function App() {
       </div>
       )}
 
-      {/* --- LANDSCAPE LAYOUT --- */}
       {!showEndScreen && (
       <div className="hidden landscape:flex w-full h-full items-center justify-center px-[3vw] gap-[2vw] xl:gap-[4vw]">
         <header className="flex flex-col items-center select-none pointer-events-none">
@@ -194,67 +250,47 @@ function App() {
 
         <main className="flex-1 flex flex-col items-center justify-center">
           <div className="relative flex items-center justify-center">
-            {/* LANDSCAPE FRAME */}
-            <img
-              src={wheelImg}
-              alt="Frame"
-              className="z-20 pointer-events-none select-none 
-                         w-[30vh] min-w-[200px] max-w-[520px] 
-                         md:w-[50vh] xl:w-[48vh]"
-            />
-            
-            {/* LANDSCAPE INSIDE */}
+            <img src={wheelImg} alt="Frame" className="z-20 pointer-events-none select-none w-[30vh] min-w-[200px] max-w-[520px] md:w-[50vh] xl:w-[48vh]" />
             <img
               ref={landscapeWheelRef} 
               src={insideImg}
               alt="Prizes"
-              className="absolute z-10 landscape-wheel 
-                         w-[27vh] min-w-[178px] max-w-[465px] 
-                         md:w-[45vh] xl:w-[43vh]"
+              className="absolute z-10 landscape-wheel w-[27vh] min-w-[178px] max-w-[465px] md:w-[45vh] xl:w-[43vh]"
               style={{
-                top: "50%",
-                left: "50%",
-                marginTop: "-2px",
+                top: "50%", left: "50%", marginTop: "-2px",
                 transform: `translate(-50%, -50%)`, 
                 animation: `smooth-spin ${IDLE_SPEED}s linear infinite`, 
               }}
             />
           </div>
 
-          {/* FIX 2: Added Hint Caption (Landscape) */}
-          <p className="text-white font-bold text-center text-sm lg:text-base drop-shadow-md mt-[2vh] px-4 animate-pulse select-none">
-             Stop the wheel to reveal a mystery discount!
+          <p className="text-[#0038B1] font-bold text-center text-sm lg:text-base drop-shadow-md mt-[2vh] px-4 animate-pulse select-none">
+              Stop the wheel to reveal a mystery discount!
           </p>
 
           <button 
             onClick={handleStop}
             disabled={isStopping}
-            className={`mt-[1vh] transition-all duration-150 z-20 
-              ${isStopping ? 'opacity-90 cursor-not-allowed scale-95' : 'animate-pulse-slow'}`}
+            className={`mt-[1vh] transition-all duration-150 z-20 ${isStopping ? 'opacity-90 cursor-not-allowed scale-95' : 'animate-pulse-slow'}`}
           >
-            <img src={stopButton} alt="STOP" 
-                 className="w-[13vh] min-w-[100px] max-w-[260px] drop-shadow-xl 
-                            md:w-[18vh] xl:w-[22vh]" 
-            />
+            <img src={stopButton} alt="STOP" className="w-[13vh] min-w-[100px] max-w-[260px] drop-shadow-xl md:w-[18vh] xl:w-[22vh]" />
           </button>
         </main>
       </div>
       )}
 
-      {/* --- END SCREEN COMPONENT --- */}
       <EndScreen showEndScreen={showEndScreen} showText2={showText2} />
+      <EndScreenLandscape showEndScreen={showEndScreen} />
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes smooth-spin {
           from { transform: translate(-50%, -50%) rotate(0deg); }
           to { transform: translate(-50%, -50%) rotate(360deg); }
         }
-
         @keyframes pulse-scale {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); } 
         }
-
         .animate-pulse-slow {
             animation: pulse-scale 2s ease-in-out infinite;
         }

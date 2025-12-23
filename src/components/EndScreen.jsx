@@ -1,35 +1,75 @@
 import React, { useState, useEffect } from "react";
 import logoImg from "../assets/img/Logo.png";
 import blastImg from "../assets/img/BLAST.png";
-import itemsImg from "../assets/img/ITEMS.png";
+import ctaButtonImg from "../assets/img/CTA.png";
+
+// Original Intro Text
 import text1Img from "../assets/img/text_1.png";
 import text2Img from "../assets/img/text_2.png";
-import ctaButtonImg from "../assets/img/CTA.png";
+
+// Product Sequence Text
+import text1st from "../assets/img/1st.png";
+import text2nd from "../assets/img/2nd.png";
+import text3rd from "../assets/img/3rd.png";
+import text4th from "../assets/img/4th.png";
+
+// Products
+import prod1 from "../assets/img/1.png";
+import prod2 from "../assets/img/2.png";
+import prod3 from "../assets/img/3.png";
+import prod4 from "../assets/img/4.png";
+
+// Decor
+import podiumImg from "../assets/img/podium with back garland.png";
+import garlandImg from "../assets/img/GARLAND.png";
 
 const EndScreen = ({ showEndScreen }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [showText2, setShowText2] = useState(false);
+  const [showIntroText2, setShowIntroText2] = useState(false); // For text_1 / text_2 toggle
+  
+  // Phase: 'intro' (text 1/2) -> 'products' (1st-4th items)
+  const [phase, setPhase] = useState('intro'); 
+  const [step, setStep] = useState(0); // 1=Prod1, 2=Prod2, etc.
 
   useEffect(() => {
-    // Trigger entrance animations after showEndScreen becomes true
     if (showEndScreen) {
+      // 1. Fade in screen content
       const timer = setTimeout(() => setIsVisible(true), 100);
-      return () => clearTimeout(timer);
+
+      // 2. Start the continuous loop immediately
+      const startTimer = setTimeout(() => {
+        setPhase('products');
+      }, 500);
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(startTimer);
+      };
     } else {
+      // Reset everything if screen closes
       setIsVisible(false);
+      setPhase('intro');
+      setStep(0);
+      setShowIntroText2(false);
     }
   }, [showEndScreen]);
 
+  // 4. Product Sequence Interval (6-step loop: text1, text2, prod1, prod2, prod4, prod3)
   useEffect(() => {
-    // Loop text animation: switch between text1 and text2 every 2 seconds
-    if (showEndScreen) {
-      const interval = setInterval(() => {
-        setShowText2((prev) => !prev);
-      }, 2000);
-      
-      return () => clearInterval(interval);
+    if (phase === 'products') {
+      // Start the sequence immediately
+      if (step === 0) setStep(1);
+
+      const productInterval = setInterval(() => {
+        setStep((prev) => {
+          if (prev < 6) return prev + 1;
+          return 1; // Loop back to step 1 (6-step cycle)
+        });
+      }, 1400); // Slower interval for smoother experience
+
+      return () => clearInterval(productInterval);
     }
-  }, [showEndScreen]);
+  }, [phase, step]);
 
   const handleClickAction = () => {
     if (window.mraid && window.mraid.open && typeof window.mraid.open === "function") {
@@ -39,24 +79,20 @@ const EndScreen = ({ showEndScreen }) => {
     }
   };
 
-  // Don't render anything if showEndScreen is false
   if (!showEndScreen) return null;
 
   return (
-    // --- MAIN WRAPPER: Added onClick and cursor-pointer here ---
     <div 
       onClick={handleClickAction}
-      className="absolute inset-0 w-full h-full flex flex-col landscape:flex-row items-center justify-between overflow-hidden z-50 cursor-pointer"
+      className="absolute inset-0 w-full h-full flex flex-col items-center justify-between overflow-hidden z-50 cursor-pointer landscape:hidden"
     >
       
       {/* =========================================================
-          LEFT SECTION (Portrait Top / Landscape Left)
-          Contains: Logo & Text
+          LEFT SECTION (Logo & Text Areas)
       ========================================================== */}
       <div
         className={`
-          flex flex-col items-center justify-start pt-[16%]
-          landscape:w-1/2 landscape:h-full landscape:justify-center landscape:pt-0 landscape:gap-4
+          flex flex-col items-center justify-start pt-[14%]
           transition-all duration-700 ease-out
           ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
         `}
@@ -65,193 +101,263 @@ const EndScreen = ({ showEndScreen }) => {
         <img
           src={logoImg}
           alt="Particle Logo"
-          className="w-[60%] max-w-[440px] sm:w-[65%] sm:max-w-[300px] md:w-[70%] md:max-w-[350px] 
-          landscape:w-[50%] landscape:max-w-[200px] 
-          landscape:sm:w-[55%] landscape:sm:max-w-[240px]
-          landscape:md:w-[60%] landscape:md:max-w-[280px]
-          landscape:lg:w-[65%] landscape:lg:max-w-[320px]
-          mb-6 landscape:mb-4"
+          className="w-[55%] max-w-[280px] sm:w-[65%] sm:max-w-[320px] md:w-[70%] md:max-w-[360px] lg:w-[65%] lg:max-w-[390px]
+          mb-4"
         />
 
-       {/* Text container with crossfade animation */}
-      <div className="relative 
-        /* --- MOVE HIGHER SETTINGS --- */
-        -mt-[2rem]           /* Mobile Portrait: Moves up 20px */
-        sm:-mt-[30px]        /* Tablet: Moves up 30px */
-        md:-mt-[-.5rem]       /* Larger Screens: Moves up 40px */
-        landscape:-mt-[10px] /* Landscape: Moves up 10px */
-        
-        /* --- SIZING --- */
-        w-[80%] max-w-[680px] sm:w-[90%] sm:max-w-[400px] md:w-[95%] md:max-w-[480px] 
-        landscape:w-[70%] landscape:max-w-[280px]
-        landscape:sm:w-[75%] landscape:sm:max-w-[320px]
-        landscape:md:w-[80%] landscape:md:max-w-[360px]
-        landscape:lg:w-[85%] landscape:lg:max-w-[400px]
-        h-[160px] sm:h-[100px] md:h-[120px] 
-        landscape:h-[70px]
-        landscape:sm:h-[80px]
-        landscape:md:h-[90px]
-        landscape:lg:h-[100px]">
+       {/* TEXT CONTAINER WRAPPER */}
+       <div className="relative 
+        /* Mobile Positioning */
+        w-[95%] max-w-[420px] h-[140px] mt-4
+        /* Tablet/iPad Mini Positioning - Bigger text */
+        sm:w-[98%] sm:max-w-[580px] sm:h-[200px] sm:mt-8
+        /* iPad Mini Portrait - Even bigger text */
+        md:w-[95%] md:max-w-[680px] md:h-[220px] md:mt-12
+        /* Desktop Positioning */
+        lg:w-[90%] lg:max-w-[720px] lg:h-[240px] lg:mt-10
+        flex items-center justify-center">
           
-         {/* Text 1 */}
-          <img
-            src={text1Img}
-            alt="Promo Text 1"
-            className={`
-              absolute inset-0 w-full h-full object-contain
-              transition-all duration-1000 ease-in-out
-              
-              /* --- NEW FIX IS HERE --- */
-              /* 1. Move UP on mobile */
-              -mt-[-.2rem] 
-              /* 2. Reset to normal on Tablet (sm) and up */
-              sm:mt-0
-              
-              ${!showText2 ? "opacity-100 scale-100 md:scale-125 rotate-0" : "opacity-0 scale-90 -rotate-3"}
-            `}
-          />
-          {/* Text 2 - positioned absolute to overlap */}
-          <img
-            src={text2Img}
-            alt="Promo Text 2"
-            className={`
-              absolute inset-0 w-full h-full object-contain
-              transition-all duration-1000 ease-in-out
-              ${showText2 ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-90 rotate-3"}
-            `}
-          />
+          {/* 6-STEP CONTINUOUS LOOP: text1, text2, 1st, 2nd, 4th, 3rd */}
+          {phase === 'products' && (
+             <>
+              {/* Step 1: text1Img */}
+            <img
+              src={text1Img}
+              alt="Intro 1"
+              className={`absolute inset-0 w-full h-full object-contain transition-all duration-700 ease-spring
+                ${step === 1 
+                  /* CHANGED: translate-y-0 -> -translate-y-8 (Moves it up) */
+                  ? "opacity-100 scale-115 sm:scale-125 md:scale-135 lg:scale-140 -translate-y-8" 
+                  : "opacity-0 scale-90 translate-y-4"
+                }`}
+            />
+
+            {/* Step 2: text2Img */}
+            <img
+              src={text2Img}
+              alt="Intro 2"
+              className={`absolute inset-0 w-full h-full object-contain transition-all duration-700 ease-spring
+                ${step === 2 
+                  /* CHANGED: translate-y-0 -> -translate-y-8 */
+                  ? "opacity-100 scale-115 sm:scale-125 md:scale-135 lg:scale-140 -translate-y-8" 
+                  : "opacity-0 scale-90 translate-y-4"
+                }`}
+            />
+               
+               {/* Step 3: text1st */}
+               <img
+                 src={text1st}
+                 alt="Detail 1st"
+                 className={`absolute inset-0 w-full h-full object-contain transition-all duration-700 ease-spring
+                   ${step === 3 ? "opacity-100 scale-125 min-[390px]:scale-135 sm:scale-145 md:scale-155 lg:scale-165 translate-y-0" : "opacity-0 scale-90 translate-y-4"}`}
+               />
+               
+               {/* Step 4: text2nd */}
+               <img
+                 src={text2nd}
+                 alt="Detail 2nd"
+                 className={`absolute inset-0 w-full h-full object-contain transition-all duration-700 ease-spring
+                   ${step === 4 ? "opacity-100 scale-125 min-[390px]:scale-135 sm:scale-145 md:scale-155 lg:scale-165 translate-y-0" : "opacity-0 scale-90 translate-y-4"}`}
+               />
+               
+               {/* Step 5: text4th */}
+               <img
+                 src={text4th}
+                 alt="Detail 4th"
+                 className={`absolute inset-0 w-full h-full object-contain transition-all duration-700 ease-spring
+                   ${step === 5 ? "opacity-100 scale-125 min-[390px]:scale-135 sm:scale-145 md:scale-155 lg:scale-165 translate-y-0" : "opacity-0 scale-90 translate-y-4"}`}
+               />
+               
+               {/* Step 6: text3rd */}
+               <img
+                 src={text3rd}
+                 alt="Detail 3rd"
+                 className={`absolute inset-0 w-full h-full object-contain transition-all duration-700 ease-spring
+                   ${step === 6 ? "opacity-100 scale-125 min-[390px]:scale-135 sm:scale-145 md:scale-155 lg:scale-165 translate-y-0" : "opacity-0 scale-90 translate-y-4"}`}
+               />
+             </>
+          )}
+
       </div>
       </div>
 
       {/* =========================================================
-          RIGHT SECTION (Portrait Bottom / Landscape Right)
-          Contains: Blast, Items, Button
+          RIGHT SECTION (Podium, Products, Button)
       ========================================================== */}
       <div
         className={`
-          flex flex-col items-center relative w-full
-          /* Portrait alignment */
-          justify-end pb-[2%] sm:pb-[3%] md:pb-[4%] lg:pb-[5%]
-          
-          /* Landscape alignment */
-          landscape:w-1/2 landscape:h-full 
-          landscape:justify-center
-          
+          flex flex-col items-center relative w-full flex-grow
+          /* Bottom alignment for Mobile */
+          justify-end pb-[8%]
           transition-all duration-700 ease-out delay-200
           ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
         `}
       >
-        {/* Container for bottom elements */}
-        <div className="relative flex items-end justify-center w-full landscape:items-end
-          /* Global Landscape Vertical Nudge */
-          landscape:translate-y-[10vh]
-          landscape:sm:translate-y-[12vh]
-          landscape:md:translate-y-[15vh]
-          landscape:lg:translate-y-[18vh]
-        "
-        >
+        <div className="relative flex items-end justify-center w-full">
+          
           {/* 1. Blast Background */}
           <img
             src={blastImg}
             alt="Blast Effect"
-            className="absolute z-0 opacity-90
-            
-            /* --- HORIZONTAL CENTERING (Locks it behind items) --- */
-            left-1/2 -translate-x-1/2
-
-            /* --- SIZING --- */
-            w-[110%] max-w-[450px]
-            md:w-[100%] md:max-w-[650px]
-            landscape:w-[100%] landscape:max-w-[50rem]
-            
-            /* --- VERTICAL POSITIONING (Adjust these to move up/down) --- */
-            
-            /* Mobile Portrait */
-            bottom-[50%] 
-
-            /* Tablet Portrait (iPad) */
-            md:bottom-[55%]
-
-            /* Landscape (All sizes) */
-            landscape:bottom-[55%]
-            "
+            className="absolute z-0 opacity-90 left-1/2 -translate-x-1/2
+            w-[110%] max-w-[390px] 
+            bottom-[20%]"
           />
 
-          {/* 2. Items (Products) */}
-         {/* ITEM IMAGE */}
-          <img
-            src={itemsImg}
-            alt="Products"
-            className="relative z-10
-            
-            /* --- PORTRAIT SIZE (UPDATED) --- */
-            /* 1. Base size: allow full width, limit max size to avoid pixelation */
-            w-full max-w-[600px]
-            
-            /* 2. Big Phones (iPhone Pro Max / Samsung Ultra): 
-               Previously restricted to 360px. Now increased to 480px. */
-            min-[390px]:max-w-[480px]
-            
-            /* 3. Tablets: Keep them controlled so they don't cover the buttons */
-            sm:w-[85%] sm:max-w-[520px]
-            md:w-[80%] md:max-w-[620px]
+          {/* 2. PODIUM & PRODUCTS GROUP */}
+          <div className="relative z-10 
+            /* Sizing for iPhone SE (Small Mobile) */
+            w-[100%] max-w-[300px]
+            min-[390px]:max-w-[380px] 
+            /* Sizing for Tablet/Desktop */
+            sm:max-w-[420px] md:w-[1020px] lg:max-w-[100px] min-[1000px]:lg:max-w-[600px]
+            flex justify-center items-end mb-[-2rem] md:mb-[-4rem] lg:mb-[-5rem]"
+          >
+            {/* --- DECOR LAYER --- */}
+            {/* The Podium Base */}
+            <img 
+              src={podiumImg} 
+              alt="Podium" 
+              className="relative z-10 w-full"
+            />
 
-            /* --- LANDSCAPE SIZE (UNCHANGED) --- */
-            landscape:w-[75%]    landscape:max-w-[180px]
-            landscape:sm:w-[90%]  landscape:sm:max-w-[320px]
-            landscape:md:w-[160%]  landscape:md:max-w-[320px]
-            landscape:lg:w-[100%] landscape:lg:max-w-[500px]
-            landscape:xl:w-[205%] landscape:xl:max-w-[650px]
+           {/* Garland Overlay */}
+            <img 
+              src={garlandImg} 
+              alt="Garland" 
+              className="absolute z-40 w-[105%] -translate-x-1/2
+              /* MOBILE DEFAULTS: */
 
-            landscape:translate-y-[0px]
-            landscape:sm:translate-y-[-20px]
-            landscape:md:translate-y-[-1rem]
-            "
-          />
+              bottom-[5rem] left-[9rem]
 
-          {/* 3. CTA Button (Visual only, removed onClick since parent handles it) */}
+              min-[390px]:bottom-[5.5rem] min-[390px]:left-[11.5rem]
+              sm:left-[13rem] sm:bottom-[6.5rem]
+              /* IPAD MINI / TABLET (md):
+            
+              md:left-[15rem] md:bottom-[7.5rem] 
+              lg:left-[22rem] lg:bottom-[11rem] */"
+            />
+
+            {/* --- PRODUCTS CONTAINER LAYER --- 
+                Separated container for easier sizing.
+                'absolute inset-0' ensures it overlaps the podium perfectly.
+            */}
+            {/* --- PRODUCTS CONTAINER LAYER --- */}
+            <div className={`
+                absolute inset-0 w-full h-full z-20 
+                /* Mobile (Default) */
+                mt-[-2rem]
+
+                min-[390px]:mt-[-4rem] 
+                /* Small Tablet / Large Phone */
+                sm:mt-[-5rem] 
+                /* iPad Mini / Desktop */
+                md:mt-[-5rem] 
+
+                lg:mt-[-12rem]
+             
+            `}>
+                        
+                {/* Prod 1 (Shampoo - Left Back) */}
+       
+                <img 
+                src={prod1} 
+                alt="Prod 1"
+                className={`${
+                  step === 3 ? "fixed z-30 left-1/2 top-[13%] min-[390px]:top-[15%] sm:top-[20%] md:top-[13%] lg:top-[13%] -translate-x-1/2 -translate-y-1/2 scale-90 min-[390px]:scale-120 sm:scale-100 md:scale-90 lg:scale-85 min-[1000px]:lg:scale-70" :
+                  "absolute"
+                } 
+                   w-[28%] min-[390px]:w-[28%] sm:w-[6%] md:w-[20%] lg:w-[22%]
+                    transition-all duration-1000 ease-spring
+                    opacity-100 
+                    ${
+                      step === 3 ? "" :
+                      step > 3 ? "z-30 left-[5%] sm:left-[6%] md:left-[7%] bottom-[8rem] sm:bottom-[9rem] md:bottom-[10rem] translate-y-0 scale-120 min-[390px]:scale-120 sm:scale-150 lg:scale-90 min-[1000px]:lg:scale-130" :
+                      "z-20 left-[5%] sm:left-[6%] md:left-[7%] bottom-[8rem] sm:bottom-[9rem] md:bottom-[10rem] translate-y-0 scale-120 min-[390px]:scale-120 sm:scale-150 lg:scale-120 min-[1000px]:lg:scale-130 grayscale-[30%]"
+                    }
+                `}
+                />
+
+                {/* Prod 2 (Perfume - Center Top - The Hero) */}
+                <img 
+                src={prod2} 
+                alt="Prod 2"
+                className={`${
+                  step === 4 ? "fixed z-90 left-1/2 top-[10%] sm:top-[20%] md:top-[9%] lg:top-[11%] -translate-x-1/2 -translate-y-1/2 scale-80 min-[390px]:scale-90 sm:scale-100 md:scale-60 lg:scale-10 min-[1000px]:lg:scale-20" :
+                  "absolute"
+                } 
+                    w-[38%] sm:w-[36%] md:w-[34%] lg:w-[24%] min-[1000px]:lg:scale-110
+                    transition-all duration-1000 ease-spring delay-100
+                    opacity-100 
+                    ${
+                      step === 4 ? "" :
+                      step > 4 ? "z-60 left-[9rem] min-[390px]:left-[12rem] sm:left-[12rem] md:left-[12rem] lg:left-[21rem] min-[1000px]:lg:left-[19rem] -translate-x-1/2 bottom-[50%] sm:bottom-[52%] md:bottom-[8rem] translate-y-0 scale-90 sm:scale-95 md:scale-100 lg:scale-100 min-[1000px]:lg:scale-10" :
+                      "z-100 left-[9rem] min-[390px]:left-[12rem] sm:left-[12rem] md:left-[12rem] lg:left-[21rem] min-[1000px]:lg:left-[19rem]  -translate-x-1/2 bottom-[50%] sm:bottom-[52%] md:bottom-[8rem] translate-y-0 scale-90 sm:scale-95  md:scale-100 lg:scale-100 min-[1000px]:lg:scale-10 grayscale-[30%]"
+                    }
+                `}
+                />
+
+                {/* Prod 3 (Face Cream - Right Back - BIGGER) */}
+                <img 
+                src={prod3} 
+                alt="Prod 3"
+                className={`${
+                  step === 6 ? "fixed z-30 left-1/2 top-[8%] sm:top-[20%] md:top-[12%] lg:top-[10%] -translate-x-1/2 -translate-y-1/2 scale-100 min-[390px]:scale-120 sm:scale-100 md:scale-80 lg:scale-95" :
+                  "absolute"
+                } 
+                    w-[30%] sm:w-[28%] md:w-[26%] lg:w-[24%]
+                    transition-all duration-1000 ease-spring delay-100
+                    opacity-100 
+                    ${
+                      step === 6 ? "" :
+                      step > 6 || step < 6 ? "z-30 right-[-.05rem] sm:right-[0.5rem] md:right-[.5rem] lg:right-[3rem] bottom-[45%] min-[390px]:bottom-[40%] sm:bottom-[46%] md:bottom-[47%] lg:bottom-[29%] translate-y-0 scale-109 sm:scale-120 md:scale-80 lg:scale-110" :
+                      "z-20 right-[-.05rem] sm:right-[0.5rem] md:right-[1rem] lg:right-[-1rem] bottom-[11rem] min-[390px]:bottom-[45%] sm:bottom-[46%] md:bottom-[47%] translate-y-0 scale-110 sm:scale-120 grayscale-[30%]"
+                    }
+                `}
+                />
+
+                {/* Prod 4 (Small Item - Center Front - BIGGER) */}
+                <img 
+                src={prod4} 
+                alt="Prod 4"
+                className={`${
+                  step === 5 ? "fixed z-20 left-1/2 top-[13%] sm:top-[20%] md:top-[13%] lg:top-[11%] -translate-x-1/2 -translate-y-1/2  scale-70 min-[390px]:scale-90 sm:scale-100 md:scale-55 lg:scale-65" :
+                  "absolute"
+                } 
+                    w-[24%] sm:w-[24%] md:w-[22%] lg:w-[20%]
+                    transition-all duration-1000 ease-spring delay-100
+                    opacity-100 
+                    ${
+                      step === 5 ? "" :
+                      step > 5 || step < 5 ? "z-40 left-[61%] sm:left-[62%] md:left-[60%] bottom-[50%] sm:bottom-[52%] md:bottom-[46%] lg:bottom-[30%] translate-y-0 scale-90 sm:scale-95" :
+                      "z-40 left-[61%] sm:left-[62%] md:left-[60%] bottom-[50%] sm:bottom-[10%] md:bottom-[55%] translate-y-0 scale-90 sm:scale-95 grayscale-[30%]"
+                    }
+                `}
+                />
+
+            </div>
+          </div>
+       
+          {/* 3. CTA Button */}
           <button
             className={`
-                absolute z-600
-                pointer-events-none /* Ensures click passes through to parent wrapper if needed, though parent captures bubbling anyway */
-                
-                /* Mobile Portrait */
-                bottom-[10%] 
-                
-                /* iPad / Tablet Portrait (768px+) */
-                md:bottom-[13%] 
-                
-                /* Desktop / Large Screens (1024px+) */
-                lg:bottom-[14%]
-
-                /* Landscape Mode */
-                landscape:bottom-[12%]
-                landscape:sm:bottom-[17%]
-                landscape:md:bottom-[20%]
-                landscape:lg:bottom-[15%]
-                landscape:xl:bottom-[23%]
-
-                transition-all duration-700 ease-out delay-400
-                ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
-                hover:scale-105 active:scale-95
-                animate-pulse
+                absolute z-50 pointer-events-none
+                /* Positioning for Mobile */
+                bottom-[5%]
+                transition-all duration-700 ease-out delay-500
+                ${phase === 'products' ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+                hover:scale-105 active:scale-95 animate-pulse
             `}
             >
             <img
                 src={ctaButtonImg}
                 alt="Shop Now"
-                className="w-[180px] sm:w-[220px] md:w-[260px] 
-                landscape:w-[120px]
-                landscape:sm:w-[140px]
-                landscape:md:w-[130px]
-                landscape:lg:w-[190px]
-                max-w-full drop-shadow-lg"
+                className="w-[160px] sm:w-[200px] lg:w-[320px] drop-shadow-lg"
             />
             </button>
         </div>
       </div>
 
-      {/* Custom keyframe styles for heartbeat */}
       <style>{`
         @keyframes heartbeat {
           0%, 100% { transform: scale(1); }
@@ -263,8 +369,9 @@ const EndScreen = ({ showEndScreen }) => {
         button {
           animation: heartbeat 1.5s ease-in-out infinite;
         }
-        button:hover {
-          animation-play-state: paused;
+        /* Bouncy spring for the elevation */
+        .ease-spring {
+            transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
         }
       `}</style>
     </div>

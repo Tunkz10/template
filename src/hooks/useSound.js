@@ -18,7 +18,9 @@ export const useSound = (src, volume = 0.7, loop = false) => {
   const play = () => {
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
-    audioRef.current.play().catch(() => {});
+    audioRef.current.play().catch((error) => {
+      console.log('Audio play failed:', error);
+    });
   };
 
   const stop = () => {
@@ -27,5 +29,14 @@ export const useSound = (src, volume = 0.7, loop = false) => {
     audioRef.current.currentTime = 0;
   };
 
-  return { play, stop };
+  const pause = () => {
+    if (!audioRef.current) return;
+    audioRef.current.pause();
+  };
+
+  const getAudio = () => {
+    return audioRef.current;
+  };
+
+  return { play, stop, pause, getAudio };
 };
